@@ -341,21 +341,98 @@ def render(summary, width, height, updated):
     return img
 
 
+def render_landscape(summary, width, height, updated):
+    """Same content as render(), laid out for a screen that is wider than tall."""
+    s = width / 800  # designed at 800 px wide and scaled from there
+    px = lambda v: round(v * s)
+    img = Image.new("L", (width, height), WHITE)
+    d = ImageDraw.Draw(img)
+    margin = px(36)
+
+    # Header
+    d.text((margin, px(18)), LOCATION_NAME, font=load_font(px(48), bold=True), fill=BLACK)
+    date_line = f"{summary['today']:%A}, {summary['today'].day} {summary['today']:%B}"
+    d.text((margin, px(78)), date_line, font=load_font(px(22)), fill=DARK)
+    range_line = f"{temp_text(summary['today_min'])} / {temp_text(summary['today_max'])}"
+    d.text((width - margin, px(34)), range_line, font=load_font(px(30)), fill=BLACK, anchor="ra")
+    d.text((width - margin, px(78)), "low / high", font=load_font(px(20)), fill=MID, anchor="ra")
+    d.line((margin, px(118), width - margin, px(118)), fill=BLACK, width=px(3))
+
+    # Three columns: morning, noon, evening
+    footer_h = px(36)
+    tomorrow_h = px(150)
+    band_top = height - footer_h - tomorrow_h
+    top = px(118)
+    col_w = (width - 2 * margin) / len(summary["parts"])
+    step = (band_top - top) / 298  # vertical positions below assume 298 px of room
+    at = lambda v: top + v * step
+    for n, part in enumerate(summary["parts"]):
+        cx = margin + col_w * (n + 0.5)
+        room = col_w - px(24)
+        text, icon = describe(part["code"])
+        d.text((cx, at(34)), part["label"], font=load_font(px(26), bold=True), fill=BLACK, anchor="mm")
+        d.text((cx, at(64)), f"{part['hour']:02d}:00", font=load_font(px(19)), fill=MID, anchor="mm")
+        draw_icon(d, icon, cx, at(122), px(84))
+        d.text((cx, at(198)), temp_text(part["temp"]), font=load_font(px(56), bold=True), fill=BLACK, anchor="mm")
+        d.text((cx, at(244)), text, font=fit_font(d, text, px(21), room), fill=BLACK, anchor="mm")
+        detail = f"Rain {value_or_dash(part['rain'], '%')} · Wind {value_or_dash(part['wind'], ' km/h')}"
+        d.text((cx, at(274)), detail, font=fit_font(d, detail, px(17), room), fill=DARK, anchor="mm")
+        if n:
+            x = margin + col_w * n
+            d.line((x, at(20), x, at(284)), fill=LIGHT, width=px(2))
+
+    # Tomorrow
+    t = summary["tomorrow"]
+    y0 = band_top
+    d.rectangle((0, y0, width, y0 + tomorrow_h), fill=BLACK)
+    mid = y0 + tomorrow_h / 2
+    text, icon = describe(t["code"])
+    d.text((margin, y0 + px(18)), "Tomorrow", font=load_font(px(30), bold=True), fill=WHITE)
+    d.text((margin, y0 + px(62)), f"{t['date']:%A} · average", font=load_font(px(20)), fill=LIGHT)
+    d.text((margin, y0 + px(100)), text, font=fit_font(d, text, px(22), px(280)), fill=WHITE)
+    r = px(56)
+    d.ellipse((width / 2 - r, mid - r, width / 2 + r, mid + r), fill=WHITE)
+    draw_icon(d, icon, width / 2, mid, px(76))
+    d.text((width - margin, y0 + px(14)), temp_text(t["mean"]), font=load_font(px(62), bold=True), fill=WHITE, anchor="ra")
+    detail = f"{temp_text(t['min'])} / {temp_text(t['max'])} · Rain {value_or_dash(t['rain'], '%')}"
+    d.text((width - margin, y0 + px(100)), detail, font=load_font(px(21)), fill=LIGHT, anchor="ra")
+
+    # Footer
+    footer = f"Updated {updated:%H:%M} · open-meteo.com"
+    d.text((width / 2, height - footer_h / 2), footer, font=load_font(px(16)), fill=MID, anchor="mm")
+    return img
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--width", type=int, default=int(os.environ.get("KINDLE_WIDTH", 600)))
     parser.add_argument("--height", type=int, default=int(os.environ.get("KINDLE_HEIGHT", 800)))
     parser.add_argument("--out", default="site/weather.png")
+    parser.add_argument(
+        "--orientation",
+        choices=["portrait", "landscape-left", "landscape-right"],
+        default=os.environ.get("KINDLE_ORIENTATION", "portrait"),
+        help="landscape-left: the top of the picture is at the Kindle's left edge; "
+        "landscape-right: at its right edge",
+    )
     parser.add_argument("--sample", action="store_true", help="use built-in sample data instead of the API")
     args = parser.parse_args()
 
     data = sample_forecast() if args.sample else fetch_forecast()
-    image = render(summarise(data), args.width, args.height, datetime.now(ZoneInfo(TIMEZONE)))
+    summary, now = summarise(data), datetime.now(ZoneInfo(TIMEZONE))
+    if args.orientation == "portrait":
+        image = upright = render(summary, args.width, args.height, now)
+    else:
+        # Draw wide, then turn it: the Kindle screen itself is always portrait.
+        upright = render_landscape(summary, args.height, args.width, now)
+        image = upright.rotate(90 if args.orientation == "landscape-left" else -90, expand=True)
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     # 8-bit grayscale, non-interlaced: the format the Kindle's `eips` tool expects.
     image.save(args.out, format="PNG", optimize=True)
-    print(f"Wrote {args.out} ({args.width}x{args.height})")
+    # An upright copy for looking at in a browser.
+    upright.save(os.path.join(os.path.dirname(args.out) or ".", "preview.png"), format="PNG", optimize=True)
+    print(f"Wrote {args.out} ({args.width}x{args.height}, {args.orientation})")
 
 
 if __name__ == "__main__":

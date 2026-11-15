@@ -22,6 +22,7 @@ In the repository: **Settings → Pages → Build and deployment → Source: Git
 
 | What | Where |
 | --- | --- |
+| Portrait or landscape | `KINDLE_ORIENTATION` in `.github/workflows/weather.yml` |
 | Screen size | `KINDLE_WIDTH` / `KINDLE_HEIGHT` in `.github/workflows/weather.yml` |
 | Time of the daily update | `cron` in `.github/workflows/weather.yml` (UTC) |
 | Location, hours shown | Settings at the top of `generate.py` |

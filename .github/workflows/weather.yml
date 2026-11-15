@@ -22,6 +22,9 @@ env:
   # Screen size of the Kindle in pixels (portrait).
   KINDLE_WIDTH: "600"
   KINDLE_HEIGHT: "800"
+  # portrait, landscape-left (top of the picture at the Kindle's left edge)
+  # or landscape-right (top of the picture at the Kindle's right edge).
+  KINDLE_ORIENTATION: "landscape-left"
 
 jobs:
   build:
