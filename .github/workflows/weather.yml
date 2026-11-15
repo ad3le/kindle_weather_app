@@ -22,9 +22,9 @@ env:
   # Screen size of the Kindle in pixels (portrait).
   KINDLE_WIDTH: "600"
   KINDLE_HEIGHT: "800"
-  # portrait, landscape-left (top of the picture at the Kindle's left edge)
-  # or landscape-right (top of the picture at the Kindle's right edge).
-  KINDLE_ORIENTATION: "landscape-left"
+  # portrait, landscape-left (Kindle turned so its buttons are on the left)
+  # or landscape-right (buttons on the right).
+  KINDLE_ORIENTATION: "landscape-right"
 
 jobs:
   build:
@@ -40,7 +40,7 @@ jobs:
       - run: sudo apt-get install -y fonts-dejavu-core
       - run: pip install -r requirements.txt
       - run: python generate.py --out site/weather.png
-      - run: cp index.html site/index.html
+      - run: cp index.html kindle/weather.sh site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

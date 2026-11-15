@@ -412,8 +412,8 @@ def main():
         "--orientation",
         choices=["portrait", "landscape-left", "landscape-right"],
         default=os.environ.get("KINDLE_ORIENTATION", "portrait"),
-        help="landscape-left: the top of the picture is at the Kindle's left edge; "
-        "landscape-right: at its right edge",
+        help="landscape-left: Kindle turned so its buttons are on the left; "
+        "landscape-right: buttons on the right",
     )
     parser.add_argument("--sample", action="store_true", help="use built-in sample data instead of the API")
     args = parser.parse_args()
