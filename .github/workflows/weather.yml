@@ -12,6 +12,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write # only for the keep-alive step
 
 concurrency:
   group: pages
@@ -42,3 +43,10 @@ jobs:
           path: site
       - id: deploy
         uses: actions/deploy-pages@v4
+      # GitHub pauses scheduled workflows after 60 days without commits.
+      # Re-enabling the workflow resets that timer, so the schedule keeps running.
+      - name: Keep the schedule alive
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/weather.yml/enable"
