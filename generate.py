@@ -14,6 +14,8 @@ import argparse
 import json
 import math
 import os
+import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -27,6 +29,9 @@ LOCATION_NAME = "Leipzig"
 LATITUDE = 51.3397
 LONGITUDE = 12.3731
 TIMEZONE = "Europe/Berlin"
+
+# From this local hour on, the image shows the next day.
+EVENING_SWITCH_HOUR = 20
 
 # Hours of the day shown for today (24h clock, local time).
 DAY_PARTS = [("Morning", 8), ("Noon", 13), ("Evening", 19)]
@@ -85,23 +90,33 @@ def fetch_forecast():
         "latitude": LATITUDE,
         "longitude": LONGITUDE,
         "timezone": TIMEZONE,
-        "forecast_days": 2,
+        "forecast_days": 3,
         "wind_speed_unit": "kmh",
         "hourly": "temperature_2m,weather_code,precipitation_probability,wind_speed_10m",
         "daily": "temperature_2m_mean,temperature_2m_max,temperature_2m_min,"
         "weather_code,precipitation_probability_max",
     }
     url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(params)
-    with urllib.request.urlopen(url, timeout=30) as response:
-        return json.load(response)
+    # Open-Meteo occasionally times out; try a few times before giving up.
+    attempts = 5
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                return json.load(response)
+        except OSError as error:  # URLError and timeouts are both OSErrors
+            if attempt == attempts:
+                raise
+            wait = 30 * attempt
+            print(f"Forecast download failed ({error}); retrying in {wait} s", file=sys.stderr)
+            time.sleep(wait)
 
 
 def sample_forecast():
     """Made-up data in the same shape as the API response, for layout testing."""
     today = datetime.now(ZoneInfo(TIMEZONE)).date()
-    tomorrow = today.fromordinal(today.toordinal() + 1)
+    days = [today.fromordinal(today.toordinal() + n) for n in range(3)]
     times, temps, codes, rain, wind = [], [], [], [], []
-    for day in (today, tomorrow):
+    for day in days:
         for hour in range(24):
             times.append(f"{day.isoformat()}T{hour:02d}:00")
             temps.append(round(6 + 5 * math.sin((hour - 9) / 24 * 2 * math.pi), 1))
@@ -117,20 +132,24 @@ def sample_forecast():
             "wind_speed_10m": wind,
         },
         "daily": {
-            "time": [today.isoformat(), tomorrow.isoformat()],
-            "temperature_2m_mean": [6.1, 4.3],
-            "temperature_2m_max": [11.0, 7.8],
-            "temperature_2m_min": [1.2, -0.6],
-            "weather_code": [61, 71],
-            "precipitation_probability_max": [70, 45],
+            "time": [day.isoformat() for day in days],
+            "temperature_2m_mean": [6.1, 4.3, 5.0],
+            "temperature_2m_max": [11.0, 7.8, 9.0],
+            "temperature_2m_min": [1.2, -0.6, 0.5],
+            "weather_code": [61, 71, 3],
+            "precipitation_probability_max": [70, 45, 20],
         },
     }
 
 
-def summarise(data):
-    """Pick out the values the dashboard shows."""
+def summarise(data, day=0):
+    """Pick out the values the dashboard shows.
+
+    `day` is which forecast day counts as "today": 0 for today, 1 to draw
+    tomorrow's report the evening before.
+    """
     hourly, daily = data["hourly"], data["daily"]
-    today = daily["time"][0]
+    today = daily["time"][day]
     index = {t: i for i, t in enumerate(hourly["time"])}
 
     parts = []
@@ -149,16 +168,16 @@ def summarise(data):
 
     return {
         "today": datetime.fromisoformat(today),
-        "today_min": daily["temperature_2m_min"][0],
-        "today_max": daily["temperature_2m_max"][0],
+        "today_min": daily["temperature_2m_min"][day],
+        "today_max": daily["temperature_2m_max"][day],
         "parts": parts,
         "tomorrow": {
-            "date": datetime.fromisoformat(daily["time"][1]),
-            "mean": daily["temperature_2m_mean"][1],
-            "min": daily["temperature_2m_min"][1],
-            "max": daily["temperature_2m_max"][1],
-            "code": daily["weather_code"][1],
-            "rain": daily["precipitation_probability_max"][1],
+            "date": datetime.fromisoformat(daily["time"][day + 1]),
+            "mean": daily["temperature_2m_mean"][day + 1],
+            "min": daily["temperature_2m_min"][day + 1],
+            "max": daily["temperature_2m_max"][day + 1],
+            "code": daily["weather_code"][day + 1],
+            "rain": daily["precipitation_probability_max"][day + 1],
         },
     }
 
@@ -419,7 +438,11 @@ def main():
     args = parser.parse_args()
 
     data = sample_forecast() if args.sample else fetch_forecast()
-    summary, now = summarise(data), datetime.now(ZoneInfo(TIMEZONE))
+    now = datetime.now(ZoneInfo(TIMEZONE))
+    # From 20:00 Leipzig time on, draw tomorrow's report: the Kindle shows it
+    # next morning, and an evening run is a safety net if the morning run is
+    # late (GitHub can delay scheduled runs by hours).
+    summary = summarise(data, 1 if now.hour >= EVENING_SWITCH_HOUR else 0)
     if args.orientation == "portrait":
         image = upright = render(summary, args.width, args.height, now)
     else:
