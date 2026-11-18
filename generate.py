@@ -194,11 +194,11 @@ def load_font(size, bold=False):
     return ImageFont.load_default(size)
 
 
-def fit_font(d, text, size, max_width):
+def fit_font(d, text, size, max_width, bold=False):
     """Largest font up to `size` at which `text` fits in `max_width`."""
-    while size > 8 and d.textlength(text, font=load_font(size)) > max_width:
+    while size > 8 and d.textlength(text, font=load_font(size, bold)) > max_width:
         size -= 1
-    return load_font(size)
+    return load_font(size, bold)
 
 
 def temp_text(value):
@@ -303,9 +303,9 @@ def render(summary, width, height, updated):
     margin = px(36)
 
     # Header
-    d.text((margin, px(30)), LOCATION_NAME, font=load_font(px(54), bold=True), fill=BLACK)
     date_line = f"{summary['today']:%A}, {summary['today'].day} {summary['today']:%B}"
-    d.text((margin, px(98)), date_line, font=load_font(px(24)), fill=DARK)
+    d.text((margin, px(88)), date_line, font=fit_font(d, date_line, px(40), px(350), bold=True), fill=BLACK, anchor="ls")
+    d.text((margin, px(98)), LOCATION_NAME, font=load_font(px(24)), fill=DARK)
     range_line = f"{temp_text(summary['today_min'])} / {temp_text(summary['today_max'])}"
     d.text((width - margin, px(52)), range_line, font=load_font(px(30)), fill=BLACK, anchor="ra")
     d.text((width - margin, px(98)), "low / high", font=load_font(px(20)), fill=MID, anchor="ra")
@@ -369,9 +369,9 @@ def render_landscape(summary, width, height, updated):
     margin = px(36)
 
     # Header
-    d.text((margin, px(18)), LOCATION_NAME, font=load_font(px(48), bold=True), fill=BLACK)
     date_line = f"{summary['today']:%A}, {summary['today'].day} {summary['today']:%B}"
-    d.text((margin, px(78)), date_line, font=load_font(px(22)), fill=DARK)
+    d.text((margin, px(64)), date_line, font=fit_font(d, date_line, px(44), px(520), bold=True), fill=BLACK, anchor="ls")
+    d.text((margin, px(78)), LOCATION_NAME, font=load_font(px(22)), fill=DARK)
     range_line = f"{temp_text(summary['today_min'])} / {temp_text(summary['today_max'])}"
     d.text((width - margin, px(34)), range_line, font=load_font(px(30)), fill=BLACK, anchor="ra")
     d.text((width - margin, px(78)), "low / high", font=load_font(px(20)), fill=MID, anchor="ra")
