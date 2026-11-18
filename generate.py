@@ -307,8 +307,7 @@ def render(summary, width, height, updated):
     d.text((margin, px(88)), date_line, font=fit_font(d, date_line, px(40), px(350), bold=True), fill=BLACK, anchor="ls")
     d.text((margin, px(98)), LOCATION_NAME, font=load_font(px(24)), fill=DARK)
     range_line = f"{temp_text(summary['today_min'])} / {temp_text(summary['today_max'])}"
-    d.text((width - margin, px(52)), range_line, font=load_font(px(30)), fill=BLACK, anchor="ra")
-    d.text((width - margin, px(98)), "low / high", font=load_font(px(20)), fill=MID, anchor="ra")
+    d.text((width - margin, px(88)), range_line, font=load_font(px(30)), fill=BLACK, anchor="rs")
     d.line((margin, px(144), width - margin, px(144)), fill=BLACK, width=px(3))
 
     # Space left for the three day parts and the "tomorrow" panel
@@ -327,11 +326,7 @@ def render(summary, width, height, updated):
         draw_icon(d, icon, px(218), mid, px(84))
         d.text((px(408), mid), temp_text(part["temp"]), font=load_font(px(54), bold=True), fill=BLACK, anchor="rm")
         right, room = width - margin, px(140)
-        d.text((right, mid - px(34)), text, font=fit_font(d, text, px(21), room), fill=BLACK, anchor="ra")
-        detail = f"Rain {value_or_dash(part['rain'], '%')}"
-        d.text((right, mid - px(4)), detail, font=load_font(px(19)), fill=DARK, anchor="ra")
-        detail = f"Wind {value_or_dash(part['wind'], ' km/h')}"
-        d.text((right, mid + px(22)), detail, font=load_font(px(19)), fill=DARK, anchor="ra")
+        d.text((right, mid), text, font=fit_font(d, text, px(21), room), fill=BLACK, anchor="rm")
         if n:
             d.line((margin, y0, width - margin, y0), fill=LIGHT, width=px(2))
 
@@ -351,8 +346,7 @@ def render(summary, width, height, updated):
     draw_icon(d, icon, px(300), mid, px(84))
     d.text((width - margin, y0 + px(22)), temp_text(t["mean"]), font=load_font(px(64), bold=True), fill=WHITE, anchor="ra")
     low_high = f"{temp_text(t['min'])} / {temp_text(t['max'])}"
-    d.text((width - margin, y0 + px(104)), low_high, font=load_font(px(22)), fill=LIGHT, anchor="ra")
-    d.text((width - margin, y0 + px(134)), f"Rain {value_or_dash(t['rain'], '%')}", font=load_font(px(22)), fill=LIGHT, anchor="ra")
+    d.text((width - margin, y0 + px(134)), low_high, font=load_font(px(22)), fill=LIGHT, anchor="ra")
 
     # Footer
     footer = f"Updated {updated:%H:%M} · open-meteo.com"
@@ -373,8 +367,7 @@ def render_landscape(summary, width, height, updated):
     d.text((margin, px(64)), date_line, font=fit_font(d, date_line, px(44), px(520), bold=True), fill=BLACK, anchor="ls")
     d.text((margin, px(78)), LOCATION_NAME, font=load_font(px(22)), fill=DARK)
     range_line = f"{temp_text(summary['today_min'])} / {temp_text(summary['today_max'])}"
-    d.text((width - margin, px(34)), range_line, font=load_font(px(30)), fill=BLACK, anchor="ra")
-    d.text((width - margin, px(78)), "low / high", font=load_font(px(20)), fill=MID, anchor="ra")
+    d.text((width - margin, px(64)), range_line, font=load_font(px(30)), fill=BLACK, anchor="rs")
     d.line((margin, px(118), width - margin, px(118)), fill=BLACK, width=px(3))
 
     # Three columns: morning, noon, evening
@@ -389,13 +382,11 @@ def render_landscape(summary, width, height, updated):
         cx = margin + col_w * (n + 0.5)
         room = col_w - px(24)
         text, icon = describe(part["code"])
-        d.text((cx, at(34)), part["label"], font=load_font(px(26), bold=True), fill=BLACK, anchor="mm")
-        d.text((cx, at(64)), f"{part['hour']:02d}:00", font=load_font(px(19)), fill=MID, anchor="mm")
-        draw_icon(d, icon, cx, at(122), px(84))
-        d.text((cx, at(198)), temp_text(part["temp"]), font=load_font(px(56), bold=True), fill=BLACK, anchor="mm")
-        d.text((cx, at(244)), text, font=fit_font(d, text, px(21), room), fill=BLACK, anchor="mm")
-        detail = f"Rain {value_or_dash(part['rain'], '%')} · Wind {value_or_dash(part['wind'], ' km/h')}"
-        d.text((cx, at(274)), detail, font=fit_font(d, detail, px(17), room), fill=DARK, anchor="mm")
+        d.text((cx, at(44)), part["label"], font=load_font(px(26), bold=True), fill=BLACK, anchor="mm")
+        d.text((cx, at(74)), f"{part['hour']:02d}:00", font=load_font(px(19)), fill=MID, anchor="mm")
+        draw_icon(d, icon, cx, at(136), px(84))
+        d.text((cx, at(214)), temp_text(part["temp"]), font=load_font(px(56), bold=True), fill=BLACK, anchor="mm")
+        d.text((cx, at(262)), text, font=fit_font(d, text, px(21), room), fill=BLACK, anchor="mm")
         if n:
             x = margin + col_w * n
             d.line((x, at(20), x, at(284)), fill=LIGHT, width=px(2))
@@ -413,7 +404,7 @@ def render_landscape(summary, width, height, updated):
     d.ellipse((width / 2 - r, mid - r, width / 2 + r, mid + r), fill=WHITE)
     draw_icon(d, icon, width / 2, mid, px(76))
     d.text((width - margin, y0 + px(14)), temp_text(t["mean"]), font=load_font(px(62), bold=True), fill=WHITE, anchor="ra")
-    detail = f"{temp_text(t['min'])} / {temp_text(t['max'])} · Rain {value_or_dash(t['rain'], '%')}"
+    detail = f"{temp_text(t['min'])} / {temp_text(t['max'])}"
     d.text((width - margin, y0 + px(100)), detail, font=load_font(px(21)), fill=LIGHT, anchor="ra")
 
     # Footer
